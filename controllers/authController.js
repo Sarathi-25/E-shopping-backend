@@ -15,7 +15,6 @@ export const signup = async (req, res) => {
     if (existingUser)
       return res.status(400).json({ message: "User already exists" });
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
@@ -25,7 +24,7 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       phoneNumber,
       address,
-      role: role || "user", // ✅ default role
+      role: role || "user",
     });
 
     await newUser.save();
@@ -71,16 +70,16 @@ export const login = async (req, res) => {
 // ------------------ GOOGLE LOGIN ------------------
 export const googleLogin = async (req, res) => {
   try {
-    const { credential } = req.body;
-    if (!credential)
-      return res.status(400).json({ message: "No credential provided" });
+    const { token } = req.body; // ✅ changed to 'token' for frontend
+    if (!token)
+      return res.status(400).json({ message: "No token provided" });
 
     const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
+      idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    const payload = ticket.getPayload();
 
+    const payload = ticket.getPayload();
     if (!payload) {
       return res.status(401).json({ message: "Invalid Google token" });
     }
@@ -98,17 +97,17 @@ export const googleLogin = async (req, res) => {
         profileImage: payload.picture,
         googleId: payload.sub,
         provider: "google",
-        role: "user", // ✅ default role
+        role: "user",
       });
     }
 
-    const token = jwt.sign(
+    const appToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    res.json({ token, user });
+    res.json({ token: appToken, user });
   } catch (err) {
     console.error("Google login error:", err);
     res.status(400).json({ message: "Google login failed" });
