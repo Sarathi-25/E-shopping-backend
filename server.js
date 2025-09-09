@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -14,31 +15,42 @@ import homeRoutes from "./routes/homeRoutes.js";
 
 dotenv.config();
 const app = express();
-app.use(express.json());
+
+// Needed for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // ✅ Middlewares
+app.use(express.json({ limit: "10mb" }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "*", // frontend URL or allow all
+    origin: process.env.CLIENT_URL || "*",
     credentials: true,
   })
 );
 
+// ✅ API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
-// Parse JSON (set high limit for images if sending base64)
-app.use(express.json({ limit: "10mb" }));
+app.use("/api/home", homeRoutes);
 
 // ✅ Static folder for uploaded images
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// ✅ API Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes); // <-- product images handled inside
-app.use("/api/cart", cartRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/home", homeRoutes);
+// ✅ Serve React frontend (build folder)
+const frontendPath = path.join(__dirname, "./client/build");
+app.use(express.static(frontendPath));
+
+// ✅ Catch-all: send index.html for React Router routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
 
 // ✅ Health check
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
   res.status(200).json({ message: "🚀 API is running..." });
 });
 
