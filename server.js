@@ -16,18 +16,21 @@ import homeRoutes from "./routes/homeRoutes.js";
 dotenv.config();
 const app = express();
 
-// Needed for __dirname in ES modules
+// ✅ Needed for __dirname with ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Middlewares
+// ✅ Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "*",
+    origin: process.env.CLIENT_URL || "*", // frontend URL
     credentials: true,
   })
 );
+
+// ✅ Static folder for uploaded images
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // ✅ API Routes
 app.use("/api/auth", authRoutes);
@@ -37,21 +40,14 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/home", homeRoutes);
 
-// ✅ Static folder for uploaded images
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
-
-// ✅ Serve React frontend (build folder)
-const frontendPath = path.join(__dirname, "./client/build");
-app.use(express.static(frontendPath));
-
-// ✅ Catch-all: send index.html for React Router routes
-app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
+// ✅ Health check route
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "🚀 API is running..." });
 });
 
-// ✅ Health check
-app.get("/health", (req, res) => {
-  res.status(200).json({ message: "🚀 API is running..." });
+// ✅ 404 handler for unknown API routes
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
 });
 
 // ✅ MongoDB Connection + Server Start
